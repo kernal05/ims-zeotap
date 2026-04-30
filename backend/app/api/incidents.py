@@ -122,6 +122,23 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     }
 
 
+
+@router.get("/stats/timeseries")
+async def get_timeseries(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Incident))
+    incidents = result.scalars().all()
+    buckets: dict = {}
+    for inc in incidents:
+        ts = inc.created_at.replace(tzinfo=None)
+        hour = ts.replace(minute=0, second=0, microsecond=0)
+        key = hour.isoformat()
+        if key not in buckets:
+            buckets[key] = {"timestamp": key, "total": 0, "P1": 0, "P2": 0, "P3": 0}
+        buckets[key]["total"] += 1
+        sev = inc.severity.value if hasattr(inc.severity, "value") else str(inc.severity)
+        if sev in buckets[key]:
+            buckets[key][sev] += 1
+    return {"window": "all", "resolution": "1h", "series": sorted(buckets.values(), key=lambda x: x["timestamp"])}
 @router.get("/{incident_id}", response_model=IncidentResponse)
 async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)):
     cached = await get_cached_incident(str(incident_id))
@@ -207,19 +224,3 @@ async def get_signals(incident_id: str):
     return logs
 
 
-@router.get("/stats/timeseries")
-async def get_timeseries(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Incident))
-    incidents = result.scalars().all()
-    buckets: dict = {}
-    for inc in incidents:
-        ts = inc.created_at.replace(tzinfo=None)
-        hour = ts.replace(minute=0, second=0, microsecond=0)
-        key = hour.isoformat()
-        if key not in buckets:
-            buckets[key] = {"timestamp": key, "total": 0, "P1": 0, "P2": 0, "P3": 0}
-        buckets[key]["total"] += 1
-        sev = inc.severity.value if hasattr(inc.severity, "value") else str(inc.severity)
-        if sev in buckets[key]:
-            buckets[key][sev] += 1
-    return {"window": "all", "resolution": "1h", "series": sorted(buckets.values(), key=lambda x: x["timestamp"])}
