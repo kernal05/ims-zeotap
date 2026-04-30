@@ -206,33 +206,15 @@ async def get_signals(incident_id: str):
     ))
     return logs
 
-@router.get("/stats/timeseries")
-async def get_timeseries(db: AsyncSession = Depends(get_db)):
-    from datetime import timedelta
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
-    result = await db.execute(select(Incident).where(Incident.created_at >= since))
-    incidents = result.scalars().all()
-    buckets: dict = {}
-    for inc in incidents:
-        hour = inc.created_at.replace(minute=0, second=0, microsecond=0)
-        key = hour.isoformat()
-        if key not in buckets:
-            buckets[key] = {"timestamp": key, "total": 0, "P1": 0, "P2": 0, "P3": 0}
-        buckets[key]["total"] += 1
-        sev = inc.severity.value if hasattr(inc.severity, "value") else str(inc.severity)
-        if sev in buckets[key]:
-            buckets[key][sev] += 1
-    return {"window": "last_24h", "resolution": "1h", "series": sorted(buckets.values(), key=lambda x: x["timestamp"])}
 
 @router.get("/stats/timeseries")
 async def get_timeseries(db: AsyncSession = Depends(get_db)):
-    from datetime import timedelta
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
-    result = await db.execute(select(Incident).where(Incident.created_at >= since))
+    result = await db.execute(select(Incident))
     incidents = result.scalars().all()
     buckets: dict = {}
     for inc in incidents:
-        hour = inc.created_at.replace(minute=0, second=0, microsecond=0)
+        ts = inc.created_at.replace(tzinfo=None)
+        hour = ts.replace(minute=0, second=0, microsecond=0)
         key = hour.isoformat()
         if key not in buckets:
             buckets[key] = {"timestamp": key, "total": 0, "P1": 0, "P2": 0, "P3": 0}
@@ -240,4 +222,4 @@ async def get_timeseries(db: AsyncSession = Depends(get_db)):
         sev = inc.severity.value if hasattr(inc.severity, "value") else str(inc.severity)
         if sev in buckets[key]:
             buckets[key][sev] += 1
-    return {"window": "last_24h", "resolution": "1h", "series": sorted(buckets.values(), key=lambda x: x["timestamp"])}
+    return {"window": "all", "resolution": "1h", "series": sorted(buckets.values(), key=lambda x: x["timestamp"])}
