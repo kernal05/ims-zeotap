@@ -135,7 +135,7 @@ async def get_timeseries(db: AsyncSession = Depends(get_db)):
         if key not in buckets:
             buckets[key] = {"timestamp": key, "total": 0, "P1": 0, "P2": 0, "P3": 0}
         buckets[key]["total"] += 1
-        sev = inc.severity.value if hasattr(inc.severity, "value") else str(inc.severity)
+        sev = inc.severity.value
         if sev in buckets[key]:
             buckets[key][sev] += 1
     return {"window": "all", "resolution": "1h", "series": sorted(buckets.values(), key=lambda x: x["timestamp"])}
