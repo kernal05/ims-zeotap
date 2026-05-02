@@ -65,3 +65,28 @@ bash sample_data.sh
 
 ## Run Tests
 cd backend && pip install pytest --break-system-packages && pytest tests/ -v
+
+## How To Test Everything End-to-End
+
+### Step 1 - Start the system
+docker compose up --build -d
+
+### Step 2 - Verify health
+curl http://localhost/health
+
+### Step 3 - Simulate failure scenario
+bash sample_data.sh
+
+### Step 4 - Open dashboard
+http://localhost
+
+### Step 5 - Run unit tests
+docker exec ims_backend pytest tests/ -v
+
+### Step 6 - Test debouncing
+curl -X POST http://localhost/api/incidents/alerts \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test","description":"Test debounce","severity":"P1","service_affected":"payments-api","alert_source":"test"}'
+
+### Step 7 - Check Swagger docs
+http://localhost/docs
