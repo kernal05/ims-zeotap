@@ -2,18 +2,17 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
-from app.models.incident import Severity, Status
 
 class AlertSignal(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
     description: str = Field(..., min_length=10)
-    severity: Severity = Severity.P3
+    severity: str = "P3"
     service_affected: str = Field(..., min_length=2)
     alert_source: Optional[str] = "manual"
 
 class IncidentUpdate(BaseModel):
     assigned_to: Optional[str] = None
-    status: Optional[Status] = None
+    status: Optional[str] = None
 
 class RCACreate(BaseModel):
     root_cause: str = Field(..., min_length=10)
@@ -31,7 +30,6 @@ class RCAResponse(BaseModel):
     prevention: str
     written_by: str
     created_at: datetime
-
     class Config:
         from_attributes = True
 
@@ -39,16 +37,16 @@ class IncidentResponse(BaseModel):
     id: UUID
     title: str
     description: str
-    severity: Severity
-    status: Status
-    assigned_to: Optional[str]
+    severity: str
+    status: str
+    assigned_to: Optional[str] = None
+    is_auto_assigned: Optional[bool] = None
     service_affected: str
-    alert_source: Optional[str]
+    alert_source: Optional[str] = None
     created_at: datetime
-    updated_at: Optional[datetime]
-    resolved_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
     rca: Optional[RCAResponse] = None
     allowed_transitions: Optional[list] = None
-
     class Config:
         from_attributes = True

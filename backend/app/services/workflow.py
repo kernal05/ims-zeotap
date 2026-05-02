@@ -1,20 +1,18 @@
-from app.models.incident import Status
-
 VALID_TRANSITIONS = {
-    Status.OPEN: [Status.INVESTIGATING],
-    Status.INVESTIGATING: [Status.MITIGATING, Status.RESOLVED],
-    Status.MITIGATING: [Status.RESOLVED],
-    Status.RESOLVED: [Status.CLOSED],
-    Status.CLOSED: []
+    "open": ["investigating"],
+    "investigating": ["mitigating", "resolved"],
+    "mitigating": ["resolved"],
+    "resolved": ["closed"],
+    "closed": []
 }
 
-def can_transition(current: Status, next: Status) -> bool:
-    return next in VALID_TRANSITIONS.get(current, [])
+def can_transition(current: str, next_status: str) -> bool:
+    return next_status in VALID_TRANSITIONS.get(current, [])
 
-def get_allowed_transitions(current: Status) -> list:
+def get_allowed_transitions(current: str) -> list:
     return VALID_TRANSITIONS.get(current, [])
 
-def validate_close(rca) -> tuple[bool, str]:
+def validate_close(rca) -> tuple:
     if rca is None:
         return False, "RCA report is mandatory before closing an incident"
     if not rca.root_cause.strip():
