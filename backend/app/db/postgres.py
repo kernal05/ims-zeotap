@@ -1,6 +1,7 @@
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
 from app.core.config import settings
 
 engine = create_async_engine(
@@ -37,6 +38,10 @@ async def init_db():
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                # Auto-migrate schema drift
+                await conn.execute(text("ALTER TABLE incidents ADD COLUMN IF NOT EXISTS is_auto_assigned BOOLEAN DEFAULT FALSE"))
+                await conn.execute(text("ALTER TABLE incidents ALTER COLUMN severity TYPE VARCHAR(10)"))
+                await conn.execute(text("ALTER TABLE incidents ALTER COLUMN status TYPE VARCHAR(50)"))
             print("Database initialized successfully")
             return
         except Exception as e:
