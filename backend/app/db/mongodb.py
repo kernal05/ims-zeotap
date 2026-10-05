@@ -20,7 +20,10 @@ def log_incident_event(incident_id: str, event: str, data: dict):
 
 
 import asyncio
+from app.db.retry import with_retry
+@with_retry(max_attempts=3, delay=0.2)
 async def alog_raw_alert(d):
     return await asyncio.to_thread(log_raw_alert, d)
+@with_retry(max_attempts=3, delay=0.2)
 async def alog_incident_event(i, e, d):
     return await asyncio.to_thread(log_incident_event, i, e, d)
