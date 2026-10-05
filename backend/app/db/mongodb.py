@@ -17,3 +17,10 @@ def log_incident_event(incident_id: str, event: str, data: dict):
         "event": event,
         "data": data
     })
+
+
+import asyncio
+async def alog_raw_alert(d):
+    return await asyncio.to_thread(log_raw_alert, d)
+async def alog_incident_event(i, e, d):
+    return await asyncio.to_thread(log_incident_event, i, e, d)
