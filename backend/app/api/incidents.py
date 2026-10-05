@@ -6,7 +6,8 @@ from sqlalchemy.orm import selectinload
 from uuid import UUID
 from datetime import datetime, timezone
 from app.db.postgres import get_db
-from app.db.mongodb import log_raw_alert, log_incident_event
+from app.db.mongodb import log_raw_alert, log_incident_event, alog_raw_alert, alog_incident_event
+from app.db.persist import persist_incident
 from app.db.redis_client import cache_incident, get_cached_incident, invalidate_cache, publish_alert, redis_client
 from app.models.incident import Incident, RCAReport
 from app.schemas.incident import AlertSignal, IncidentUpdate, RCACreate, IncidentResponse, RCAResponse
@@ -33,7 +34,7 @@ async def ingest_alert(alert: AlertSignal, db: AsyncSession = Depends(get_db)):
 
     now = datetime.now(timezone.utc).isoformat()
 
-    raw_id = log_raw_alert({
+    raw_id = await alog_raw_alert({
         "title": alert.title,
         "description": alert.description,
         "severity": alert.severity,
@@ -43,7 +44,7 @@ async def ingest_alert(alert: AlertSignal, db: AsyncSession = Depends(get_db)):
     })
 
     if existing_id:
-        log_incident_event(existing_id, "duplicate_signal", {"raw_alert_id": raw_id})
+        await alog_incident_event(existing_id, "duplicate_signal", {"raw_alert_id": raw_id})
         return {
             "incident_id": existing_id,
             "raw_alert_id": raw_id,
@@ -62,16 +63,12 @@ async def ingest_alert(alert: AlertSignal, db: AsyncSession = Depends(get_db)):
     incident.assigned_to = auto_assign_incident(alert.service_affected, alert.severity)
     incident.is_auto_assigned = True
 
-    db.add(incident)
-    await db.flush()
-
-    # ✅ FIX: ensure DB write is committed
-    await db.commit()
+    await persist_incident(db, incident)
     await db.refresh(incident)
 
     await redis_client.setex(debounce_key, 10, str(incident.id))
 
-    log_incident_event(
+    await alog_incident_event(
         str(incident.id),
         "created",
         {"severity": alert.severity, "raw_alert_id": raw_id}
@@ -221,7 +218,7 @@ async def update_status(incident_id: UUID, update: IncidentUpdate, db: AsyncSess
         if update.status == "resolved":
             incident.resolved_at = datetime.now(timezone.utc)
 
-        log_incident_event(
+        await alog_incident_event(
             str(incident.id),
             "status_changed",
             {"from": incident.status, "to": update.status}
@@ -257,7 +254,7 @@ async def submit_rca(incident_id: UUID, rca_data: RCACreate, db: AsyncSession = 
     db.add(rca)
     await db.flush()
 
-    log_incident_event(
+    await alog_incident_event(
         str(incident_id),
         "rca_submitted",
         {"written_by": rca_data.written_by}
