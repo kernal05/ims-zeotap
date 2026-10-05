@@ -84,6 +84,9 @@ services:
   frontend:
     build: ./frontend
     container_name: ims_frontend
+    depends_on:
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   nginx:
