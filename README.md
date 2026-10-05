@@ -1,4 +1,4 @@
-# Incident Management System (IMS) - Zeotap SRE Intern Assignment
+# Incident Management System (IMS) 
 
 **Vishal Jena** | vishaljena2001@gmail.com | +91 9265710767
 GitHub: https://github.com/kernal05/ims-zeotap
